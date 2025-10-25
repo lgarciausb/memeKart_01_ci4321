@@ -395,7 +395,7 @@ class memeKart {
                 shell.shell.position.y,
                 this.player.chasis.position.z + 30*Math.cos(shell.angle)
             )
-            if (e) shell.shell.rotation.y = shell.angle
+            shell.shell.rotation.y = shell.angle
         }
     }
 

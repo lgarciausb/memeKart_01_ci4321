@@ -111,7 +111,7 @@ class Car {
         if (Math.sign(this.dir) !== Math.sign(r)) {
             const sign = Math.sign(r) - Math.sign(this.dir)
             this.dir = Math.sign(r)
-            this.wheels.forEach((w,i)=>{
+            this.wheels.forEach((w)=>{
                 w.rotateOnWorldAxis(new t.Vector3(0, 1, 0), sign*Math.PI/32)
                 //if (i < 2)  else w.rotation.y += sign*Math.PI/32
             })
