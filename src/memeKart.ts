@@ -346,7 +346,6 @@ class memeKart {
 
         for (let i of removeTree) {
             this.scene.remove(this.track.forest[i].tree)
-            this.track.forest.splice(i, 1)
         } 
         this.track.forest.splice(0, this.track.forest.length, ...this.track.forest.filter((_,e)=> !removeTree.includes(e)))
     }
