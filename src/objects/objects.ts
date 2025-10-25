@@ -5,5 +5,6 @@ import { ItemBox } from "./ItemBox"
 import { Tree } from "./Tree"
 import { Bomb } from "./Bomb"
 import { Shell } from "./Shell"
+import { Mushroom } from "./Mushroom"
 
-export { Car, Track, ItemBox, Tree, Bomb, Shell }
+export { Car, Track, ItemBox, Tree, Bomb, Shell, Mushroom }

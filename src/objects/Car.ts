@@ -6,18 +6,20 @@ class Car {
     cabin : t.Mesh
     wheels : t.Mesh[]
     geometries : t.Mesh[]
-    camera : t.Camera
+    camera : t.PerspectiveCamera
     cameraType : number = 0
 
     items : Bomb[] = []
 
     a : number = 0
     v : number = 0
-    maxV : number = 10 
+    maxV : number = 10
     r : number = 0
     dir : number = 0
 
-    constructor(scene: t.Scene, camera: t.Camera, color : number) {
+    speedUp : Date | undefined = undefined
+
+    constructor(scene: t.Scene, camera: t.PerspectiveCamera, color : number) {
 
         this.chasis = new t.Mesh(
             new t.BoxGeometry(16, 9, 42),
@@ -83,13 +85,20 @@ class Car {
             this.camera.rotation.y = this.chasis.rotation.y+Math.PI
             this.camera.rotateX(-0.392699082)
         }
-        
+        if (this.speedUp && this.camera.fov < 90) {
+            this.camera.fov += 0.5
+            this.camera.updateProjectionMatrix();
+        } else if (!this.speedUp && this.camera.fov > 75) {
+            this.camera.fov -= 0.5
+            this.camera.updateProjectionMatrix();
+        }
         
     }
 
     rotate() {
         
-        const r = this.r
+        let r = this.r
+        if (this.speedUp) r*=1.5
         
         this.chasis.rotation.y += r
         this.cabin.rotateY(r)
@@ -124,8 +133,16 @@ class Car {
         this.moveCamera()
     }
     move() {
-        this.v += this.a + ((this.a === 0 && this.v !==0) ? -Math.min(0.0035, Math.abs(this.v))*Math.sign(this.v) : 0) 
-        if (Math.abs(this.v) > this.maxV) this.v = this.maxV*Math.abs(this.v)/this.v
+        if (this.speedUp) {
+            this.v = -this.maxV*1.5
+            if ((new Date()).getTime() - this.speedUp.getTime() > 2000) {
+                this.speedUp = undefined
+            }
+        }
+        else {
+            this.v += this.a + ((this.a === 0 && this.v !==0) ? -Math.min(0.0035, Math.abs(this.v))*Math.sign(this.v) : 0) 
+            if (Math.abs(this.v) > this.maxV) this.v = this.maxV*Math.abs(this.v)/this.v
+        }
 
         const dx = this.v*Math.sin(this.chasis.rotation.y)
         const dz = this.v*Math.cos(this.chasis.rotation.y)

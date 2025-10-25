@@ -10,7 +10,7 @@ class memeKart {
     camera : t.PerspectiveCamera
     player : OBJECTS.Car
     track : OBJECTS.Track
-    items : (OBJECTS.Bomb| OBJECTS.Shell)[]  = []
+    items : (OBJECTS.Bomb | OBJECTS.Shell | OBJECTS.Mushroom)[]  = []
     
 
     pressedKeys = {d:false, a: false, w: false, s: false}
@@ -109,6 +109,10 @@ class memeKart {
                 case 'e':
                     this.getShells()
                     break;
+                case 'r':
+                    const ms = new OBJECTS.Mushroom(this.scene)
+                    this.items.push(ms)
+                    break;
             }
         }
         window.addEventListener('keydown', handleKeyDown, false);
@@ -120,9 +124,9 @@ class memeKart {
     moveObjects() {
         //move player
         this.player.rotate()
-        this.player.move() //moves item too
+        this.player.move()
 
-        //move projectiles
+        //move items
         this.moveItems()
 
         //move boxes
@@ -218,12 +222,26 @@ class memeKart {
                         item.shell.rotation.y += Math.PI/30
                         break;
                 }
+            } else if (item instanceof OBJECTS.Mushroom) {
+                switch (item.status) {
+                    case "stored":
+                        item.ms.position.set(
+                            this.player.chasis.position.x + 30*Math.sin(this.player.chasis.rotation.y), 
+                            item.ms.position.y,
+                            this.player.chasis.position.z + 30*Math.cos(this.player.chasis.rotation.y)
+                        )
+                        break;
+                    case "thrown": 
+                        removeItems.push(i)
+                        break;
+                }
             }
         })
 
         removeItems.forEach(i=>{
             if (this.items[i] instanceof OBJECTS.Bomb) this.scene.remove(this.items[i].bomb)
-            else this.scene.remove(this.items[i].shell)
+            else if (this.items[i] instanceof OBJECTS.Shell) this.scene.remove(this.items[i].shell)
+            else this.scene.remove(this.items[i].ms)
             
             this.items.splice(i,1)
         })
@@ -253,6 +271,9 @@ class memeKart {
             //with player
             if (this.collision(this.player.chasis, tree.trunk)) {
                 this.player.v = 0
+                if (this.player.speedUp) {
+                    this.player.speedUp = undefined
+                }
             }
             //with items
             this.items.forEach((item, e) => {
@@ -261,10 +282,10 @@ class memeKart {
                 if (item instanceof OBJECTS.Bomb) {
                     if (this.collision(item.bombBody, tree.trunk)||this.collision(item.bombBody, tree.leaves)) {
                         removeTree.push(i)
-                        if (item.status == "thrown") item.status = "explode"
+                        if (item.status == "thrown" || item.status == "onGround") item.status = "explode"
                     }
                 //with shell
-                } else {
+                } else if (item instanceof OBJECTS.Shell) {
                     if (this.collision(item.shell, tree.trunk)) {
                         removeTree.push(i)
                         removeItem.push(e)
@@ -276,15 +297,20 @@ class memeKart {
         //wall collision
         this.track.walls.forEach(wall=> {
             //with player
-            if (this.collision(this.player.chasis, wall)) this.player.v = 0
+            if (this.collision(this.player.chasis, wall)) {
+                this.player.v = 0
+                if (this.player.speedUp) {
+                    this.player.speedUp = undefined
+                }
+            }
             //with item
             this.items.forEach((item, i) => {
                 if (item.status == "stored") return
                 //with bomb
                 if (item instanceof OBJECTS.Bomb) {
-                    if (this.collision(item.bombBody, wall) && item.status == "thrown") item.status = "explode"    
+                    if (this.collision(item.bombBody, wall) && (item.status == "thrown" || item.status == "onGround")) item.status = "explode"    
                 //with shell
-                } else {
+                } else if (item instanceof OBJECTS.Shell) {
                     if (this.collision(item.shell, wall)) {
                         if (this.bounceShell(item, wall)) removeItem.push(i)
                     }
@@ -296,7 +322,9 @@ class memeKart {
         this.track.boxes.forEach((box, i)=> {
             if (this.collision(this.player.chasis, box.box)) { 
                 removeBox.push(i)
-                if (Math.random() > 0.5) this.items.push(new OBJECTS.Bomb(this.scene))
+                const rand = Math.random()
+                if (rand > 0.66) this.items.push(new OBJECTS.Bomb(this.scene))
+                else if (rand > 0.33) this.items.push(new OBJECTS.Mushroom(this.scene))
                 else this.getShells()
             }
         })
@@ -311,7 +339,8 @@ class memeKart {
 
         for (let i of removeItem) {
             if (this.items[i] instanceof OBJECTS.Bomb) this.scene.remove(this.items[i].bomb)
-            else this.scene.remove(this.items[i].shell)
+            else if (this.items[i] instanceof OBJECTS.Shell) this.scene.remove(this.items[i].shell)
+            else this.scene.remove(this.items[i].ms)
         } 
         this.items.splice(0, this.items.length, ...this.items.filter((_,e)=> !removeItem.includes(e)))
 
@@ -371,11 +400,11 @@ class memeKart {
     }
 
     throwItem() {
-        let i = this.items.length -1
-        while ( i >= 0 && ( this.items[i--]).status !== "stored")
-        if (i < 0) return
+        let i = 0
+        while ( i < this.items.length  && ( this.items[i]).status !== "stored") {i++}
+        if (i == this.items.length) return
 
-        const item = this.items[i+1]
+        const item = this.items[i]
         
         if (item instanceof OBJECTS.Bomb) {
             item.v = [-(-this.player.v+1.5)*Math.sin(this.player.chasis.rotation.y), 1, -(-this.player.v+1.5)*Math.cos(this.player.chasis.rotation.y)]
@@ -385,7 +414,7 @@ class memeKart {
                 item.bomb.position.y,
                 this.player.chasis.position.z - 10*Math.cos(this.player.chasis.rotation.y)
             )
-        } else {
+        } else if (item instanceof OBJECTS.Shell) {
             item.v = [-(-this.player.v+3)*Math.sin(this.player.chasis.rotation.y), 0, -(-this.player.v+3)*Math.cos(this.player.chasis.rotation.y)]
 
             item.shell.position.set(
@@ -393,6 +422,8 @@ class memeKart {
                 item.shell.position.y,
                 this.player.chasis.position.z - 10*Math.cos(this.player.chasis.rotation.y)
             )
+        } else if (item instanceof OBJECTS.Mushroom) {
+            this.player.speedUp = new Date()
         }
         item.status = "thrown"
     }
